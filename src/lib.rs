@@ -1,13 +1,13 @@
 extern crate static_assertions;
 
 #[cfg(feature = "recast")]
-#[allow(non_camel_case_types, non_snake_case, non_upper_case_globals)]
+#[allow(non_camel_case_types, non_snake_case, non_upper_case_globals, unsafe_op_in_unsafe_fn)]
 mod ffi_recast {
   include!(concat!(env!("OUT_DIR"), "/recast.rs"));
 }
 
 #[cfg(feature = "detour")]
-#[allow(non_camel_case_types, non_snake_case, non_upper_case_globals)]
+#[allow(non_camel_case_types, non_snake_case, non_upper_case_globals, unsafe_op_in_unsafe_fn)]
 mod ffi_detour {
   include!(concat!(env!("OUT_DIR"), "/detour.rs"));
 
@@ -19,7 +19,7 @@ mod ffi_detour {
 }
 
 #[cfg(feature = "detour_crowd")]
-#[allow(non_camel_case_types, non_snake_case, non_upper_case_globals)]
+#[allow(non_camel_case_types, non_snake_case, non_upper_case_globals, unsafe_op_in_unsafe_fn)]
 mod ffi_detour_crowd {
   use crate::ffi_detour::*;
 
@@ -27,7 +27,7 @@ mod ffi_detour_crowd {
 }
 
 #[cfg(feature = "detour_tile_cache")]
-#[allow(non_camel_case_types, non_snake_case, non_upper_case_globals)]
+#[allow(non_camel_case_types, non_snake_case, non_upper_case_globals, unsafe_op_in_unsafe_fn)]
 mod ffi_detour_tile_cache {
   use crate::ffi_detour::*;
 
@@ -35,7 +35,7 @@ mod ffi_detour_tile_cache {
 }
 
 #[cfg(any(feature = "recast", feature = "detour_tile_cache"))]
-#[allow(non_camel_case_types, non_snake_case, non_upper_case_globals)]
+#[allow(non_camel_case_types, non_snake_case, non_upper_case_globals, unsafe_op_in_unsafe_fn)]
 mod ffi_inline {
   #[cfg(feature = "detour")]
   use crate::ffi_detour::*;

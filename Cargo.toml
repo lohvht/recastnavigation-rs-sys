@@ -1,5 +1,5 @@
 [package]
-edition = "2021"
+edition = "2024"
 name = "recastnavigation-sys"
 version = "1.0.3"
 
@@ -34,7 +34,7 @@ recast = []
 static_assertions = "1.1.0"
 
 [build-dependencies]
-bindgen = "0.69.1"
+bindgen = "0.73"
 cc = "1.0.83"
 cmake = "0.1.50"
 pkg-config = "0.3.28"
