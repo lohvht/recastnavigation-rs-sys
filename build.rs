@@ -16,7 +16,7 @@ fn main() {
     (lib_destination, include_dirs, defines) = build_recast();
   } else {
     (lib_destination, include_dirs, defines) =
-      find_recast().unwrap_or_else(|| build_recast());
+      find_recast().unwrap_or_else(build_recast);
   }
 
   link_cpp_std();
@@ -24,7 +24,7 @@ fn main() {
   println!("cargo:rustc-link-search=native={}", lib_destination.display());
 
   for lib in lib_names() {
-    println!("cargo:rustc-link-lib=static={}", lib);
+    println!("cargo:rustc-link-lib=static={lib}");
   }
 
   // Avoid building/linking the inlining lib if only detour/detour_crowd are
@@ -47,24 +47,11 @@ fn is_debug() -> bool {
     "1" | "2" | "3" | "s" | "z" => false,
     unknown => {
       println!(
-        "cargo:warning=Unknown opt-level={}, defaulting to release",
-        unknown
+        "cargo:warning=Unknown opt-level={unknown}, defaulting to release"
       );
       false
     }
   }
-}
-
-fn is_32_bit() -> bool {
-  env::var("TARGET")
-    .expect("TARGET should be provided by Cargo.")
-    .contains("i686")
-}
-
-fn is_nightly() -> bool {
-  env::var("RUSTUP_TOOLCHAIN")
-    .expect("RUSTUP_TOOLCHAIN should be provided by Cargo.")
-    .starts_with("nightly")
 }
 
 fn lib_names() -> Vec<String> {
@@ -86,18 +73,20 @@ fn lib_names() -> Vec<String> {
 
 fn lib_name_to_file_name(lib_name: &str) -> String {
   if is_windows() {
-    format!("{}.lib", lib_name)
+    format!("{lib_name}.lib")
   } else {
-    format!("lib{}.a", lib_name)
+    format!("lib{lib_name}.a")
   }
 }
 
-fn find_recast(
-) -> Option<(PathBuf, Vec<PathBuf>, HashMap<String, Option<String>>)> {
+type FindRecastOption =
+  Option<(PathBuf, Vec<PathBuf>, HashMap<String, Option<String>>)>;
+
+fn find_recast() -> FindRecastOption {
   let lib = match pkg_config::Config::new().probe("recastnavigation") {
     Ok(value) => value,
     Err(error) => {
-      println!("pkg_config failed to find RecastNavigation: {}", error);
+      println!("pkg_config failed to find RecastNavigation: {error}");
       return None;
     }
   };
@@ -128,15 +117,15 @@ fn find_recast(
       .zip(check_libs)
       .filter_map(
         |(lib_name, present)| {
-          if present {
-            None
-          } else {
-            Some(lib_name.as_str())
-          }
+          if present { None } else { Some(lib_name.as_str()) }
         },
       )
       .collect::<Vec<&str>>();
-    println!("cargo:warning=Found recastnavigation using pkgconfig at {}, but not all libraries were present. Missing libs: {:?}", lib_dir.display(), missing_libs);
+    println!(
+      "cargo:warning=Found recastnavigation using pkgconfig at {}, but not all libraries were present. Missing libs: {:?}",
+      lib_dir.display(),
+      missing_libs
+    );
 
     None
   }
@@ -148,7 +137,8 @@ fn build_recast() -> (PathBuf, Vec<PathBuf>, HashMap<String, Option<String>>) {
   lib_builder
     .define("RECASTNAVIGATION_DEMO", "OFF")
     .define("RECASTNAVIGATION_EXAMPLES", "OFF")
-    .define("RECASTNAVIGATION_TESTS", "OFF");
+    .define("RECASTNAVIGATION_TESTS", "OFF")
+    .define("CMAKE_POLICY_VERSION_MINIMUM", "3.5");
   #[cfg(feature = "detour_large_nav_meshes")]
   lib_builder.define("RECASTNAVIGATION_DT_POLYREF64", "ON");
 
@@ -206,19 +196,14 @@ fn generate_recast_bindings(
           .map(|include_dir| format!("-I{}", include_dir.display())),
       )
       .clang_args(defines.iter().map(|(name, value)| match value {
-        Some(value) => format!("-D{}={}", name, value),
-        None => format!("-D{}", name),
+        Some(value) => format!("-D{name}={value}"),
+        None => format!("-D{name}"),
       }))
       .blocklist_file(".*stddef\\.h")
       .blocklist_type("max_align_t");
 
-    if is_windows() && is_32_bit() {
-      if is_nightly() {
-        builder = builder.rust_target(bindgen::RustTarget::Nightly);
-      } else {
-        println!("cargo:warning=Windows 32 bit uses the \"thiscall\" ABI. This feature is not enabled, so compilation may fail! Consider using nightly Rust, which enables this feature.");
-      }
-    }
+    // NOTE: Windows 32 bit uses the "thiscall" ABI, which has been stable since
+    // Rust 1.73, so bindgen's default (latest stable) Rust target handles it.
 
     #[cfg(feature = "detour_large_nav_meshes")]
     {
@@ -340,13 +325,7 @@ fn build_and_link_inline_lib(
   }
 
   for (name, value) in defines.iter() {
-    build.define(
-      name,
-      match value {
-        Some(value) => Some(value.as_str()),
-        None => None,
-      },
-    );
+    build.define(name, value.as_ref().map(|value| value.as_str()));
   }
 
   build.compile("recast_inline");
@@ -369,8 +348,8 @@ fn generate_inline_bindings(
         .map(|include_dir| format!("-I{}", include_dir.display())),
     )
     .clang_args(defines.iter().map(|(name, value)| match value {
-      Some(value) => format!("-D{}={}", name, value),
-      None => format!("-D{}", name),
+      Some(value) => format!("-D{name}={value}"),
+      None => format!("-D{name}"),
     }))
     .allowlist_recursively(false)
     .allowlist_file("inline_lib_src/inline.h");
@@ -419,6 +398,6 @@ fn link_cpp_std() {
   };
 
   if let Some(cpp_std) = cpp_std {
-    println!("cargo:rustc-link-lib={}", cpp_std);
+    println!("cargo:rustc-link-lib={cpp_std}");
   }
 }
